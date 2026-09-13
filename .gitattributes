@@ -1,0 +1,8 @@
+# GitHub Linguist Language Overrides
+# Exclude HTML files and generated benchmark outputs from repository language statistics
+*.html linguist-generated=true
+*.html linguist-vendored=true
+*.csv linguist-generated=true
+*.csv linguist-vendored=true
+benchmarks/reports/** linguist-generated=true
+benchmarks/reports/** linguist-vendored=true
