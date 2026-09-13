@@ -52,16 +52,23 @@ class SemanticCacheService:
         max_distance = 1.0 - threshold
         cosine_distance_expr = SemanticCache.embedding.cosine_distance(query_embedding)
 
-        match = (
-            self.db.query(SemanticCache)
-            .filter(cosine_distance_expr <= max_distance)
-            .order_by(cosine_distance_expr.asc())
-            .first()
-        )
-
-        if match:
-            return match.response_text
-        return None
+        try:
+            match = (
+                self.db.query(SemanticCache)
+                .filter(cosine_distance_expr <= max_distance)
+                .order_by(cosine_distance_expr.asc())
+                .first()
+            )
+            if match:
+                return match.response_text
+            return None
+        except Exception as exc:
+            logger.warning("Database query error or timeout during pgvector search: %s", exc)
+            try:
+                self.db.rollback()
+            except Exception:
+                pass
+            raise
 
     def save_to_cache(
         self, query_text: str, query_embedding: list[float], response_text: str
@@ -75,21 +82,30 @@ class SemanticCacheService:
             response_text: The generated LLM response to cache.
         """
         # 1. Persist to PostgreSQL with pgvector
-        cache_entry = SemanticCache(
-            query_text=query_text,
-            embedding=query_embedding,
-            response_text=response_text,
-        )
-        self.db.add(cache_entry)
-        self.db.commit()
-        self.db.refresh(cache_entry)
+        try:
+            cache_entry = SemanticCache(
+                query_text=query_text,
+                embedding=query_embedding,
+                response_text=response_text,
+            )
+            self.db.add(cache_entry)
+            self.db.commit()
+            self.db.refresh(cache_entry)
+            entry_id = cache_entry.id
+        except Exception as exc:
+            logger.error("Failed to persist entry to PostgreSQL (pgvector): %s", exc)
+            try:
+                self.db.rollback()
+            except Exception:
+                pass
+            entry_id = None
 
-        # 2. Persist to Redis
+        # 2. Persist to Redis with strict error handling
         if self.redis is not None:
             try:
                 redis_key = f"semantic_cache:{query_text}"
                 cache_payload = json.dumps({
-                    "id": cache_entry.id,
+                    "id": entry_id,
                     "query_text": query_text,
                     "embedding": query_embedding,
                     "response_text": response_text,

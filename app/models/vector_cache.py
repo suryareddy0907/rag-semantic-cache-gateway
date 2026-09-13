@@ -13,7 +13,7 @@ class SemanticCache(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     query_text = Column(String, nullable=False, index=True)
-    embedding = Column(Vector(1536), nullable=False)
+    embedding = Column(Vector(3072), nullable=False)
     response_text = Column(String, nullable=False)
     created_at = Column(
         DateTime,

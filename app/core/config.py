@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     SIMILARITY_THRESHOLD: float = 0.85
     CACHE_TTL_SECONDS: int = 3600
 
+    # Mock Provider Configuration (for local load testing)
+    USE_MOCK_EMBEDDINGS: bool = False
+    EMBEDDING_DIMENSIONS: int = 3072
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

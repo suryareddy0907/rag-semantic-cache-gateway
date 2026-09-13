@@ -1,6 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.router import api_router
 from app.core.config import settings
 
 # Initialize FastAPI application
@@ -18,6 +19,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API Routers
+app.include_router(api_router, prefix="/api")
 
 
 @app.get("/", tags=["Health Check"])
